@@ -1,0 +1,906 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Orbit — Admin Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap"
+      rel="stylesheet"
+    />
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              canvas: "#EEECE1",
+              ink: "#171717",
+              muted: "#85827A",
+              line: "#D9D6C9",
+              green: "#2ABD73",
+              terminal: "#1B1B1B",
+            },
+            fontFamily: {
+              display: ["Anton", "sans-serif"],
+              mono: ['"IBM Plex Mono"', "monospace"],
+            },
+          },
+        },
+      };
+    </script>
+    <style>
+      * {
+        box-shadow: none !important;
+        border-radius: 0 !important;
+      }
+      body {
+        font-family: "IBM Plex Mono", monospace;
+        background:
+          linear-gradient(#dedbcc 1px, transparent 1px),
+          linear-gradient(90deg, #dedbcc 1px, transparent 1px);
+        background-size: 40px 40px;
+        background-color: #eeece1;
+        color: #171717;
+      }
+      h1,
+      h2,
+      h3,
+      .font-display {
+        font-family: "Anton", sans-serif;
+        letter-spacing: 0.02em;
+        text-transform: uppercase;
+      }
+
+      .card {
+        background: #fff;
+        border: 1px solid #d9d6c9;
+        transition: border-color 0.15s ease;
+      }
+      .card:hover {
+        border-color: #171717;
+      }
+      
+      .tick {
+        position: relative;
+      }
+      .tick::before,
+      .tick::after {
+        content: "";
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        pointer-events: none;
+      }
+      .tick::before {
+        top: -1px;
+        left: -1px;
+        border-top: 1px solid #171717;
+        border-left: 1px solid #171717;
+      }
+      .tick::after {
+        top: -1px;
+        right: -1px;
+        border-top: 1px solid #171717;
+        border-right: 1px solid #171717;
+      }
+
+      .btn-solid {
+        background: #171717;
+        color: #eeece1;
+        font-family: "IBM Plex Mono", monospace;
+        letter-spacing: 0.04em;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 11px 20px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid #171717;
+        transition: background 0.15s ease;
+      }
+      .btn-solid:hover {
+        background: #333;
+      }
+      .btn-outline {
+        background: transparent;
+        color: #171717;
+        font-family: "IBM Plex Mono", monospace;
+        letter-spacing: 0.04em;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 10px 20px;
+        font-size: 13px;
+        font-weight: 500;
+        border: 1px solid #171717;
+        transition: all 0.15s ease;
+      }
+      .btn-outline:hover {
+        background: #171717;
+        color: #eeece1;
+      }
+
+      .nav-item {
+        font-family: "IBM Plex Mono", monospace;
+        font-size: 13px;
+        letter-spacing: 0.03em;
+        transition: background 0.15s ease, color 0.15s ease;
+      }
+      .nav-item.active {
+        background: #171717;
+        color: #eeece1;
+        border-left: 4px solid #2abd73;
+      }
+      .nav-item .arrow {
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+      .nav-item.active .arrow,
+      .nav-item:hover .arrow {
+        opacity: 1;
+      }
+
+      .bar-track {
+        display: flex;
+        align-items: flex-end;
+        gap: 10px;
+        height: 180px;
+      }
+      .bar {
+        flex: 1;
+        background: #171717;
+        position: relative;
+        transition: height 0.8s cubic-bezier(0.2, 0.8, 0.2, 1);
+        height: 0;
+      }
+      .bar.peak {
+        background: #2abd73;
+      }
+      .bar span {
+        position: absolute;
+        top: -22px;
+        left: 50%;
+        transform: translateX(-50%);
+        font-size: 10px;
+        color: #85827a;
+        white-space: nowrap;
+        font-family: "IBM Plex Mono", monospace;
+      }
+
+      .tag {
+        font-size: 11px;
+        letter-spacing: 0.03em;
+        padding: 3px 8px;
+        display: inline-block;
+        border: 1px solid currentColor;
+        font-family: "IBM Plex Mono", monospace;
+      }
+
+      .term-dot {
+        width: 9px;
+        height: 9px;
+        border-radius: 50% !important;
+      }
+
+      ::-webkit-scrollbar {
+        width: 6px;
+        height: 6px;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #171717;
+      }
+
+      #sidebar {
+        transition: width 0.25s ease, transform 0.25s ease;
+        height: 100vh;
+        position: sticky;
+        top: 0;
+      }
+      
+      /* Sidebar collapse helper classes */
+      #sidebar.collapsed {
+        width: 76px;
+      }
+      #sidebar.collapsed .hide-on-collapse {
+        display: none !important;
+      }
+      #sidebar.collapsed .collapse-center {
+        justify-content: center !important;
+        padding-left: 0 !important;
+        padding-right: 0 !important;
+      }
+
+      @media (max-width: 1023px) {
+        #sidebar {
+          position: fixed;
+          z-index: 40;
+          height: 100vh;
+          transform: translateX(-100%);
+          width: 260px !important;
+        }
+        #sidebar.open {
+          transform: translateX(0);
+        }
+      }
+
+      a:focus-visible,
+      button:focus-visible,
+      input:focus-visible {
+        outline: 1px solid #171717;
+        outline-offset: 2px;
+      }
+    </style>
+  </head>
+  <body class="text-ink">
+    <div class="flex min-h-screen">
+      <div
+        id="overlay"
+        class="fixed inset-0 bg-ink/40 z-30 hidden lg:hidden"
+      ></div>
+
+      <!-- SIDEBAR -->
+      <aside
+        id="sidebar"
+        class="w-64 shrink-0 font-bold bg-canvas bg-white border-r border-line flex flex-col justify-between"
+      >
+        <div class="flex flex-col h-full overflow-hidden">
+          <!-- Top Brand & Toggle -->
+          <div class="h-16 flex items-center justify-between px-6 border-b border-line shrink-0">
+            <div class="flex items-center gap-2 overflow-hidden">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" class="shrink-0">
+                <path
+                  d="M2 14L12 6L22 14"
+                  stroke="#171717"
+                  stroke-width="2.4"
+                  stroke-linecap="square"
+                />
+                <path
+                  d="M2 20L12 12L22 20"
+                  stroke="#171717"
+                  stroke-width="2.4"
+                  stroke-linecap="square"
+                />
+              </svg>
+              <a
+                href="admin-dashboard.html"
+                class="font-mono font-bold text-base tracking-tight hide-on-collapse"
+                >ORBIT</a
+              >
+            </div>
+            <button id="sidebarToggle" class="hidden lg:flex p-1 text-muted hover:text-ink">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <rect x="3" y="3" width="18" height="18" rx="0" />
+                <path d="M9 3v18" />
+              </svg>
+            </button>
+          </div>
+
+          <!-- Nav Items -->
+          <nav class="px-3 py-5 space-y-1 overflow-y-auto flex-1">
+            <p class="px-3 text-[10px] text-muted mb-2 tracking-[.15em] hide-on-collapse">
+              OVERVIEW
+            </p>
+            <a
+              href="#"
+              class="nav-item active flex items-center justify-between px-3 py-2.5 collapse-center"
+              title="Dashboard"
+            >
+              <span class="flex items-center gap-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="shrink-0"
+                >
+                  <rect x="3" y="3" width="7" height="9" />
+                  <rect x="14" y="3" width="7" height="5" />
+                  <rect x="14" y="12" width="7" height="9" />
+                  <rect x="3" y="16" width="7" height="5" />
+                </svg>
+                <span class="hide-on-collapse">DASHBOARD</span>
+              </span>
+              <span class="arrow hide-on-collapse">›</span>
+            </a>
+            <a
+              href="#"
+              class="nav-item flex items-center justify-between px-3 py-2.5 text-ink/70 hover:bg-line/60 hover:text-ink collapse-center"
+              title="Analytics"
+            >
+              <span class="flex items-center gap-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="shrink-0"
+                >
+                  <path d="M3 3v18h18" />
+                  <path d="M7 15l4-6 3 3 5-8" />
+                </svg>
+                <span class="hide-on-collapse">ANALYTICS</span>
+              </span>
+              <span class="arrow hide-on-collapse">›</span>
+            </a>
+            <a
+              href="orders.html"
+              class="nav-item flex items-center justify-between px-3 py-2.5 text-ink/70 hover:bg-line/60 hover:text-ink collapse-center"
+              title="Orders"
+            >
+              <span class="flex items-center gap-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="shrink-0"
+                >
+                  <circle cx="9" cy="21" r="1" />
+                  <circle cx="20" cy="21" r="1" />
+                  <path
+                    d="M1 1h4l2.7 13.4a2 2 0 0 0 2 1.6h9.7a2 2 0 0 0 2-1.6L23 6H6"
+                  />
+                </svg>
+                <span class="hide-on-collapse">ORDERS</span>
+              </span>
+              <span class="arrow hide-on-collapse">›</span>
+            </a>
+            <a
+              href="customers.html"
+              class="nav-item flex items-center justify-between px-3 py-2.5 text-ink/70 hover:bg-line/60 hover:text-ink collapse-center"
+              title="Customers"
+            >
+              <span class="flex items-center gap-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="shrink-0"
+                >
+                  <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                  <circle cx="9" cy="7" r="4" />
+                  <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                </svg>
+                <span class="hide-on-collapse">CUSTOMERS</span>
+              </span>
+              <span class="arrow hide-on-collapse">›</span>
+            </a>
+            <a
+              href="products.html"
+              class="nav-item flex items-center justify-between px-3 py-2.5 text-ink/70 hover:bg-line/60 hover:text-ink collapse-center"
+              title="Products"
+            >
+              <span class="flex items-center gap-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="shrink-0"
+                >
+                  <path
+                    d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"
+                  />
+                  <polyline points="3.27 6.96 12 12.01 20.73 6.96" />
+                  <line x1="12" y1="22.08" x2="12" y2="12" />
+                </svg>
+                <span class="hide-on-collapse">PRODUCTS</span>
+              </span>
+              <span class="arrow hide-on-collapse">›</span>
+            </a>
+
+            <p class="px-3 text-[10px] text-muted mb-2 mt-6 tracking-[.15em] hide-on-collapse">
+              MANAGE
+            </p>
+            <a
+              href="reports.html"
+              class="nav-item flex items-center justify-between px-3 py-2.5 text-ink/70 hover:bg-line/60 hover:text-ink collapse-center"
+              title="Reports"
+            >
+              <span class="flex items-center gap-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="shrink-0"
+                >
+                  <path d="M9 11l3 3L22 4" />
+                  <path
+                    d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"
+                  />
+                </svg>
+                <span class="hide-on-collapse">REPORTS</span>
+              </span>
+              <span class="arrow hide-on-collapse">›</span>
+            </a>
+            <a
+              href="settings.html"
+              class="nav-item flex items-center justify-between px-3 py-2.5 text-ink/70 hover:bg-line/60 hover:text-ink collapse-center"
+              title="Settings"
+            >
+              <span class="flex items-center gap-3">
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="2"
+                  class="shrink-0"
+                >
+                  <circle cx="12" cy="12" r="3" />
+                  <path
+                    d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"
+                  />
+                </svg>
+                <span class="hide-on-collapse">SETTINGS</span>
+              </span>
+              <span class="arrow hide-on-collapse">›</span>
+            </a>
+          </nav>
+
+          <!-- Fixed Bottom Profile Section -->
+          <div class="p-4 border-t border-line shrink-0 bg-white">
+            <a
+              href="profile.html"
+              class="flex items-center gap-3 px-2 py-2 hover:bg-line/60 collapse-center transition"
+              title="Maya Arif - Operations Lead"
+            >
+              <div
+                class="w-9 h-9 bg-ink text-canvas flex items-center justify-center font-mono font-semibold text-xs shrink-0"
+              >
+                MA
+              </div>
+              <div class="leading-tight hide-on-collapse">
+                <p class="text-xs font-semibold">MAYA ARIF</p>
+                <p class="text-[11px] text-muted">OPERATIONS LEAD</p>
+              </div>
+            </a>
+          </div>
+        </div>
+      </aside>
+
+  <!-- MAIN -->
+  <div class="flex-1 flex flex-col min-w-0">
+
+    <!-- TOPBAR -->
+    <header class="h-16 bg-canvas border-b border-line flex items-center justify-between px-4 lg:px-8 sticky top-0 z-20 bg-white">
+      <div class="flex items-center gap-4 flex-1">
+        <button id="menuBtn" class="lg:hidden p-2 -ml-2">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#171717" stroke-width="2"><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+        </button>
+        <div class="relative max-w-md w-full hidden sm:flex items-center border border-line bg-white">
+          <span class="pl-3 text-muted text-xs">$</span>
+          <input type="text" aria-label="Search orders, customers, products" placeholder="search orders, customers, products" class="w-full bg-transparent pl-2 pr-3 py-2.5 text-[13px] placeholder:text-muted focus:outline-none" />
+        </div>
+      </div>
+      <div class="flex items-center gap-5">
+        <button class="relative p-2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#171717" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+          <span class="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-green" style="border-radius:50%!important"></span>
+        </button>
+        <div class="w-px h-6 bg-line"></div>
+        <a href="profile.html" class="text-xs font-mono tracking-wide hidden sm:inline-flex items-center gap-1">› ACCOUNT ‹</a>
+      </div>
+    </header>
+
+    <main class="flex-1 p-4 lg:p-8 space-y-6">
+      
+      <!-- PAGE HEADING -->
+      <div class="tick p-6 bg-white border border-line flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <p class="text-[11px] text-muted tracking-[.1em] mb-2">CATALOG</p>
+          <h1 class="text-3xl lg:text-4xl font-display font-600 leading-none">Product catalog</h1>
+        </div>
+        <div class="flex gap-2">
+          <button id="exportBtn" class="btn-outline">EXPORT CSV</button>
+          <a href="add-product.html" class="btn-solid">‹ ADD PRODUCT ›</a>
+        </div>
+      </div>
+
+      <!-- STAT CARDS -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="card p-5">
+          <p class="text-[11px] text-muted tracking-[.08em]">TOTAL PRODUCTS</p>
+          <p class="font-display font-600 text-4xl mt-3 countup" data-target="128">0</p>
+          <div class="flex items-center gap-1 mt-3 text-xs text-green">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+            +6 THIS MONTH
+          </div>
+        </div>
+        <div class="card p-5">
+          <p class="text-[11px] text-muted tracking-[.08em]">IN STOCK</p>
+          <p class="font-display font-600 text-4xl mt-3 countup" data-target="104">0</p>
+          <div class="flex items-center gap-1 mt-3 text-xs text-green">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="18 15 12 9 6 15"/></svg>
+            81% OF CATALOG
+          </div>
+        </div>
+        <div class="card p-5">
+          <p class="text-[11px] text-muted tracking-[.08em]">LOW STOCK</p>
+          <p class="font-display font-600 text-4xl mt-3 countup" data-target="18">0</p>
+          <div class="flex items-center gap-1 mt-3 text-xs text-amber">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            NEEDS REORDER
+          </div>
+        </div>
+        <div class="card p-5">
+          <p class="text-[11px] text-muted tracking-[.08em]">OUT OF STOCK</p>
+          <p class="font-display font-600 text-4xl mt-3 countup" data-target="6">0</p>
+          <div class="flex items-center gap-1 mt-3 text-xs text-red">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="6 9 12 15 18 9"/></svg>
+            −2 VS LAST WEEK
+          </div>
+        </div>
+      </div>
+
+      <!-- FILTER & SEARCH BAR -->
+      <div class="card p-4 flex flex-wrap items-center justify-between gap-3">
+        <div id="categoryFilters" class="flex flex-wrap border border-line text-xs">
+          <button data-category="ALL" class="px-3 py-1.5 bg-ink text-canvas font-medium transition-colors">ALL</button>
+          <button data-category="Furniture" class="px-3 py-1.5 text-muted hover:text-ink transition-colors">FURNITURE</button>
+          <button data-category="Lighting" class="px-3 py-1.5 text-muted hover:text-ink transition-colors">LIGHTING</button>
+          <button data-category="Textiles" class="px-3 py-1.5 text-muted hover:text-ink transition-colors">TEXTILES</button>
+          <button data-category="Kitchen" class="px-3 py-1.5 text-muted hover:text-ink transition-colors">KITCHEN</button>
+          <button data-category="Decor" class="px-3 py-1.5 text-muted hover:text-ink transition-colors">DECOR</button>
+        </div>
+        <div class="relative flex items-center border border-line bg-white">
+          <span class="pl-3 text-muted text-xs">$</span>
+          <input type="text" id="tableSearch" placeholder="search products or SKUs" class="bg-transparent pl-2 pr-3 py-2 text-[13px] placeholder:text-muted focus:outline-none w-52" />
+        </div>
+      </div>
+
+      <!-- TABLE -->
+      <div class="card overflow-hidden">
+        <div class="flex items-center justify-between p-6 pb-4">
+          <h2 class="font-display font-600 text-xl">Catalog</h2>
+          <p id="productCountLabel" class="text-xs font-mono text-muted">9 PRODUCTS DISPLAYED</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-[13px]" id="productTable">
+            <thead>
+              <tr class="text-left text-muted border-y border-line text-[11px] tracking-[.05em]">
+                <th class="font-medium px-6 py-3">PRODUCT</th>
+                <th class="font-medium px-6 py-3">CATEGORY</th>
+                <th class="font-medium px-6 py-3">STOCK</th>
+                <th class="font-medium px-6 py-3">PRICE</th>
+                <th class="font-medium px-6 py-3">STATUS</th>
+                <th class="font-medium px-6 py-3 text-right">ACTIONS</th>
+              </tr>
+            </thead>
+            <tbody id="productTableBody">
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Lighting">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">DL</div>
+                    <div>
+                      <p class="font-medium product-name">Desk Lamp — Oak</p>
+                      <p class="text-[11px] text-muted">SKU-1042</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Lighting</td>
+                <td class="px-6 py-3.5">34 units</td>
+                <td class="px-6 py-3.5 font-medium">$84.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-green">IN STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Desk Lamp — Oak')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Kitchen">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">CM</div>
+                    <div>
+                      <p class="font-medium product-name">Ceramic Mug Set</p>
+                      <p class="text-[11px] text-muted">SKU-2210</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Kitchen</td>
+                <td class="px-6 py-3.5">61 units</td>
+                <td class="px-6 py-3.5 font-medium">$36.50</td>
+                <td class="px-6 py-3.5"><span class="tag text-green">IN STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Ceramic Mug Set')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Textiles">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">LT</div>
+                    <div>
+                      <p class="font-medium product-name">Linen Throw Blanket</p>
+                      <p class="text-[11px] text-muted">SKU-3387</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Textiles</td>
+                <td class="px-6 py-3.5">12 units</td>
+                <td class="px-6 py-3.5 font-medium">$129.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-amber">LOW STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Linen Throw Blanket')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Furniture">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">WS</div>
+                    <div>
+                      <p class="font-medium product-name">Wall Shelf — Walnut</p>
+                      <p class="text-[11px] text-muted">SKU-1108</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Furniture</td>
+                <td class="px-6 py-3.5">0 units</td>
+                <td class="px-6 py-3.5 font-medium">$62.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-red">OUT OF STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Wall Shelf — Walnut')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Textiles">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">TR</div>
+                    <div>
+                      <p class="font-medium product-name">Table Runner</p>
+                      <p class="text-[11px] text-muted">SKU-3392</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Textiles</td>
+                <td class="px-6 py-3.5">47 units</td>
+                <td class="px-6 py-3.5 font-medium">$28.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-green">IN STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Table Runner')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Decor">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">WB</div>
+                    <div>
+                      <p class="font-medium product-name">Woven Basket — Large</p>
+                      <p class="text-[11px] text-muted">SKU-4471</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Decor</td>
+                <td class="px-6 py-3.5">8 units</td>
+                <td class="px-6 py-3.5 font-medium">$54.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-amber">LOW STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Woven Basket — Large')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Decor">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">BC</div>
+                    <div>
+                      <p class="font-medium product-name">Brass Candle Holder</p>
+                      <p class="text-[11px] text-muted">SKU-4488</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Decor</td>
+                <td class="px-6 py-3.5">90 units</td>
+                <td class="px-6 py-3.5 font-medium">$22.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-green">IN STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Brass Candle Holder')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Furniture">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">OT</div>
+                    <div>
+                      <p class="font-medium product-name">Oak Side Table</p>
+                      <p class="text-[11px] text-muted">SKU-1119</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Furniture</td>
+                <td class="px-6 py-3.5">5 units</td>
+                <td class="px-6 py-3.5 font-medium">$168.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-amber">LOW STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Oak Side Table')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+              <tr class="border-b border-line last:border-0 hover:bg-canvas/60" data-category="Textiles">
+                <td class="px-6 py-3.5">
+                  <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 bg-line/70 border border-line shrink-0 flex items-center justify-center font-mono text-[10px] text-muted">WP</div>
+                    <div>
+                      <p class="font-medium product-name">Wool Throw Pillow</p>
+                      <p class="text-[11px] text-muted">SKU-3401</p>
+                    </div>
+                  </div>
+                </td>
+                <td class="px-6 py-3.5 text-muted category-cell">Textiles</td>
+                <td class="px-6 py-3.5">73 units</td>
+                <td class="px-6 py-3.5 font-medium">$41.00</td>
+                <td class="px-6 py-3.5"><span class="tag text-green">IN STOCK</span></td>
+                <td class="px-6 py-3.5 text-right">
+                  <a href="add-product.html" class="text-[11px] tracking-wide underline underline-offset-2 mr-3">EDIT</a>
+                  <button onclick="openDeleteModal('Wool Throw Pillow')" class="text-[11px] tracking-wide underline underline-offset-2 text-red bg-transparent border-0 cursor-pointer">DELETE</button>
+                </td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+        <div class="flex items-center justify-between px-6 py-4 border-t border-line text-xs text-muted">
+          <span id="tablePaginationInfo">SHOWING 1—9 OF 128</span>
+          <div class="flex gap-2">
+            <button class="btn-ghost px-3 py-1.5" disabled>‹ PREV</button>
+            <button class="btn-ghost px-3 py-1.5">NEXT ›</button>
+          </div>
+        </div>
+      </div>
+
+      <footer class="text-center text-[11px] text-muted py-4 tracking-wide">ORBIT ADMIN — SAMPLE DASHBOARD FOR INTERNAL REVIEW</footer>
+
+    </main>
+  </div>
+</div>
+
+<!-- DELETE CONFIRMATION MODAL -->
+<div id="deleteModal" class="fixed inset-0 bg-ink/50 z-50 flex items-center justify-center hidden p-4">
+  <div class="card bg-white max-w-md w-full p-6 tick space-y-4">
+    <div class="flex items-center justify-between">
+      <h3 class="font-display font-600 text-xl text-red">CONFIRM DELETION</h3>
+      <button onclick="closeDeleteModal()" class="text-muted hover:text-ink font-mono text-sm">✕</button>
+    </div>
+    <p class="text-xs text-muted leading-relaxed">You are about to delete <strong id="deleteItemName" class="text-ink">this item</strong> from the catalog. This action cannot be undone and will update inventory logs.</p>
+    <div class="flex gap-3 pt-2">
+      <button onclick="closeDeleteModal()" class="btn-outline flex-1 justify-center">CANCEL</button>
+      <button onclick="confirmDelete()" class="btn-solid bg-red border-red hover:bg-red/90 flex-1 justify-center">DELETE ITEM</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Mobile Sidebar Toggle
+  const sidebar = document.getElementById('sidebar');
+  const overlay = document.getElementById('overlay');
+  const menuBtn = document.getElementById('menuBtn');
+  if (menuBtn) {
+    menuBtn.addEventListener('click', () => {
+      sidebar.classList.toggle('open');
+      overlay.classList.toggle('hidden');
+    });
+    overlay.addEventListener('click', () => {
+      sidebar.classList.remove('open');
+      overlay.classList.add('hidden');
+    });
+  }
+
+  // Countup Animation
+  document.querySelectorAll('.countup').forEach(el => {
+    const target = parseFloat(el.dataset.target);
+    let current = 0;
+    const steps = 40;
+    const increment = target / steps;
+    let step = 0;
+    const timer = setInterval(() => {
+      step++;
+      current += increment;
+      if (step >= steps) { current = target; clearInterval(timer); }
+      el.textContent = Math.round(current);
+    }, 25);
+  });
+
+  // Dynamic Category Filtering & Live Search
+  const categoryButtons = document.querySelectorAll('#categoryFilters button');
+  const tableSearchInput = document.getElementById('tableSearch');
+  const tableRows = document.querySelectorAll('#productTableBody tr');
+  const countLabel = document.getElementById('productCountLabel');
+  const paginationInfo = document.getElementById('tablePaginationInfo');
+
+  let activeCategory = 'ALL';
+
+  function filterTable() {
+    const query = tableSearchInput.value.toLowerCase().trim();
+    let visibleCount = 0;
+
+    tableRows.forEach(row => {
+      const rowCategory = row.dataset.category;
+      const textContent = row.textContent.toLowerCase();
+      
+      const matchesCategory = (activeCategory === 'ALL' || rowCategory === activeCategory);
+      const matchesSearch = textContent.includes(query);
+
+      if (matchesCategory && matchesSearch) {
+        row.style.display = '';
+        visibleCount++;
+      } else {
+        row.style.display = 'none';
+      }
+    });
+
+    countLabel.textContent = `${visibleCount} PRODUCTS DISPLAYED`;
+    paginationInfo.textContent = `SHOWING 1—${visibleCount} OF 128`;
+  }
+
+  categoryButtons.forEach(btn => {
+    btn.addEventListener('click', () => {
+      categoryButtons.forEach(b => {
+        b.classList.remove('bg-ink', 'text-canvas', 'font-medium');
+        b.classList.add('text-muted');
+      });
+      btn.classList.add('bg-ink', 'text-canvas', 'font-medium');
+      btn.classList.remove('text-muted');
+
+      activeCategory = btn.dataset.category;
+      filterTable();
+    });
+  });
+
+  tableSearchInput.addEventListener('input', filterTable);
+
+  // Delete Modal Controller
+  let itemToDelete = null;
+  const deleteModal = document.getElementById('deleteModal');
+  const deleteItemName = document.getElementById('deleteItemName');
+
+  function openDeleteModal(itemName) {
+    itemToDelete = itemName;
+    deleteItemName.textContent = itemName;
+    deleteModal.classList.remove('hidden');
+  }
+
+  function closeDeleteModal() {
+    itemToDelete = null;
+    deleteModal.classList.add('hidden');
+  }
+
+  function confirmDelete() {
+    // Locate and remove row matching itemToDelete
+    tableRows.forEach(row => {
+      const name = row.querySelector('.product-name').textContent;
+      if (name === itemToDelete) {
+        row.remove();
+      }
+    });
+    closeDeleteModal();
+    filterTable();
+  }
+
+  // Export CSV mock trigger
+  document.getElementById('exportBtn').addEventListener('click', () => {
+    alert('Catalog CSV export generated successfully.');
+  });
+</script>
+</body>
+</html>
